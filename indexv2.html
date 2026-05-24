@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Sistema Barbearia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#121212;
+  color:#fff;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+}
+.box{
+  background:#1e1e1e;
+  padding:20px;
+  border-radius:10px;
+  width:350px;
+  display:none;
+}
+button,input{
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+  border:none;
+  border-radius:5px;
+}
+button{background:#28a745;color:#fff;font-weight:bold;}
+button.sair{background:#c62828;}
+.card{background:#2a2a2a;padding:10px;border-radius:5px;margin:6px 0;}
+#mensagem{text-align:center;margin-bottom:10px;}
+</style>
+</head>
+<body>
+
+<div id="mensagem"></div>
+
+<div class="box" id="login">
+  <h2>Login</h2>
+  <input id="user" placeholder="Usuário">
+  <input id="pass" type="password" placeholder="Senha">
+  <button onclick="login()">Entrar</button>
+</div>
+
+<div class="box" id="dashboard">
+  <h2>Barbearia</h2>
+  <button onclick="mostrar('agendamento')">Novo Agendamento</button>
+  <button onclick="mostrar('agenda')">Agenda Completa</button>
+  <button onclick="mostrar('agendaHoje')">Agenda Hoje</button>
+  <button class="sair" onclick="sair()">Sair</button>
+</div>
+
+<div class="box" id="agendamento">
+  <h2>Novo Agendamento</h2>
+  <input id="cliente" placeholder="Cliente">
+  <input type="date" id="data">
+  <input type="time" id="hora">
+  <button onclick="salvar()">Salvar</button>
+  <button onclick="mostrar('dashboard')">Voltar</button>
+</div>
+
+<div class="box" id="agenda">
+  <h2>Agenda</h2>
+  <div id="lista"></div>
+  <button onclick="mostrar('dashboard')">Voltar</button>
+</div>
+
+<div class="box" id="agendaHoje">
+  <h2>Agenda Hoje</h2>
+  <div id="listaHoje"></div>
+  <button onclick="mostrar('dashboard')">Voltar</button>
+</div>
+
+<script>
+const API = "https://localhost:7169/api/Agendamento";
+
+function mostrarMensagem(msg, ok=true){
+  const m=document.getElementById("mensagem");
+  m.innerText=msg;
+  m.style.color=ok?"#32cd32":"#e53935";
+  setTimeout(()=>m.innerText="",3000);
+}
+
+function mostrar(t){
+  document.querySelectorAll(".box").forEach(b=>b.style.display="none");
+  document.getElementById(t).style.display="block";
+  if(t==="agenda") carregarAgenda();
+  if(t==="agendaHoje") carregarAgendaHoje();
+}
+mostrar("login");
+
+function login(){
+  if(user.value==="admin" && pass.value==="123"){
+    mostrar("dashboard");
+  }else mostrarMensagem("Login inválido",false);
+}
+function sair(){mostrar("login");}
+
+async function salvar(){
+  if(!cliente.value||!data.value||!hora.value){
+    mostrarMensagem("Preencha tudo",false); return;
+  }
+
+  const res = await fetch(API,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      cliente:cliente.value,
+      data:data.value,
+      hora:hora.value
+    })
+  });
+
+  if(res.ok){
+    mostrarMensagem("Agendamento salvo!");
+    mostrar("agendaHoje");
+  }else{
+    mostrarMensagem("Horário ocupado",false);
+  }
+}
+
+async function carregarAgenda(){
+  const res=await fetch(API);
+  const dados=await res.json();
+  lista.innerHTML="";
+  dados.forEach(a=>{
+    lista.innerHTML+=`
+      <div class="card">
+        <b>${a.cliente}</b><br>
+        ${a.data} ${a.hora}<br>
+        <button onclick="cancelar(${a.id})">Cancelar</button>
+      </div>`;
+  });
+}
+
+async function carregarAgendaHoje(){
+  const res=await fetch(API+"/hoje");
+  const dados=await res.json();
+  listaHoje.innerHTML="";
+  dados.forEach(a=>{
+    listaHoje.innerHTML+=`
+      <div class="card">
+        <b>${a.cliente}</b><br>${a.hora}
+      </div>`;
+  });
+}
+
+async function cancelar(id){
+  await fetch(API+"/"+id,{method:"DELETE"});
+  carregarAgenda();
+  carregarAgendaHoje();
+}
+</script>
+
+</body>
+</html>
+
+

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Sistema Barbearia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+/* --------- BASE --------- */
+body{
+  margin:0;
+  font-family:Arial, Helvetica, sans-serif;
+  background:#121212;
+  color:#fff;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+}
+.box{
+  background:#1e1e1e;
+  padding:20px;
+  border-radius:10px;
+  width:350px;
+  display:none;
+  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+h2{text-align:center; margin-bottom:15px;}
+input, button{
+  width:100%;
+  padding:12px;
+  margin:8px 0;
+  border:none;
+  border-radius:5px;
+  box-sizing:border-box;
+  font-size:16px;
+}
+button{
+  background: linear-gradient(90deg,#32CD32,#28a745);
+  color:#fff;
+  font-weight:bold;
+  cursor:pointer;
+  transition: 0.3s;
+}
+button:hover{opacity:0.9;}
+button.sair{
+  background: linear-gradient(90deg,#e53935,#b71c1c);
+}
+label{display:block;text-align:left; margin-bottom:5px;}
+.card{
+  background:#2a2a2a;
+  padding:12px;
+  border-radius:6px;
+  margin:8px 0;
+  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
+#mensagem{
+  text-align:center;
+  margin-bottom:10px;
+  font-weight:bold;
+}
+
+/* --------- RESPONSIVO --------- */
+@media (max-width:480px){
+  .box{
+    width:90%;
+    padding:15px;
+  }
+  input, button{
+    font-size:14px;
+    padding:10px;
+  }
+  h2{font-size:18px;}
+  .card{padding:8px;}
+}
+</style>
+</head>
+<body>
+
+<!-- MENSAGEM -->
+<div id="mensagem"></div>
+
+<!-- LOGIN -->
+<div class="box" id="login">
+  <h2>🔐 Login</h2>
+  <input id="user" placeholder="Usuário">
+  <input id="pass" type="password" placeholder="Senha">
+  <button onclick="login()">Entrar</button>
+</div>
+
+<!-- DASHBOARD -->
+<div class="box" id="dashboard">
+  <h2>💈 Barbearia</h2>
+  <button onclick="mostrar('agendamento')">Novo Agendamento</button>
+  <button onclick="mostrar('agenda')">Agenda Completa</button>
+  <button onclick="mostrar('agendaHoje')">Agenda de Hoje</button>
+  <button class="sair" onclick="sair()">Sair</button>
+</div>
+
+<!-- AGENDAMENTO -->
+<div class="box" id="agendamento">
+  <h2>Novo Agendamento</h2>
+  <input id="cliente" placeholder="Cliente">
+  <label><input type="checkbox" value="30"> Corte (R$30)</label>
+  <label><input type="checkbox" value="25"> Barba (R$25)</label>
+  <label><input type="checkbox" value="15"> Sobrancelha (R$15)</label>
+  <input type="date" id="data">
+  <input type="time" id="hora">
+  <p>Total: R$ <span id="total">0</span></p>
+  <button onclick="salvar()">Salvar</button>
+  <button onclick="mostrar('dashboard')">Voltar</button>
+</div>
+
+<!-- AGENDA COMPLETA -->
+<div class="box" id="agenda">
+  <h2>Agenda Completa</h2>
+  <div id="lista"></div>
+  <button onclick="mostrar('dashboard')">Voltar</button>
+</div>
+
+<!-- AGENDA DE HOJE -->
+<div class="box" id="agendaHoje">
+  <h2>📅 Agenda de Hoje</h2>
+  <div id="listaHoje"></div>
+  <button onclick="mostrar('dashboard')">Voltar</button>
+</div>
+
+<script>
+/* --------- FUNÇÃO DE FEEDBACK --------- */
+function mostrarMensagem(texto, sucesso=true){
+  const msg = document.getElementById("mensagem");
+  msg.innerText = texto;
+  msg.style.color = sucesso ? "#32CD32" : "#e53935";
+  setTimeout(()=>{msg.innerText="";},3000);
+}
+
+/* --------- CONTROLE DE TELAS --------- */
+function mostrar(tela){
+  document.querySelectorAll(".box").forEach(b=>b.style.display="none");
+  document.getElementById(tela).style.display="block";
+  if(tela==="agenda") carregarAgenda();
+  if(tela==="agendaHoje") carregarAgendaHoje();
+}
+mostrar("login");
+
+/* --------- LOGIN --------- */
+function login(){
+  if(user.value==="admin" && pass.value==="123"){
+    sessionStorage.setItem("logado","1");
+    mostrarMensagem("Login efetuado!");
+    mostrar("dashboard");
+  }else{
+    mostrarMensagem("Usuário ou senha inválidos", false);
+  }
+}
+function sair(){
+  sessionStorage.clear();
+  mostrarMensagem("Logout efetuado");
+  mostrar("login");
+}
+
+/* --------- AGENDAMENTO --------- */
+document.querySelectorAll("input[type=checkbox]").forEach(c=>{
+  c.addEventListener("change", calcular);
+});
+
+function calcular(){
+  let t=0;
+  document.querySelectorAll("input[type=checkbox]:checked")
+    .forEach(c=>t+=Number(c.value));
+  total.innerText=t;
+}
+
+function salvar(){
+  if(!cliente.value || !data.value || !hora.value){
+    mostrarMensagem("Preencha todos os campos", false);
+    return;
+  }
+
+  let ag = JSON.parse(localStorage.getItem("agendamentos")) || [];
+  
+  // BLOQUEIO HORÁRIO DUPLICADO
+  const duplicado = ag.find(a=>a.data===data.value && a.hora===hora.value);
+  if(duplicado){
+    mostrarMensagem("Já existe agendamento nesse horário", false);
+    return;
+  }
+
+  ag.push({
+    cliente: cliente.value,
+    data: data.value,
+    hora: hora.value,
+    total: total.innerText
+  });
+
+  localStorage.setItem("agendamentos", JSON.stringify(ag));
+  mostrarMensagem("Agendamento salvo!");
+  mostrar("agendaHoje");
+}
+
+/* --------- AGENDA COMPLETA --------- */
+function carregarAgenda(){
+  let ag = JSON.parse(localStorage.getItem("agendamentos")) || [];
+  lista.innerHTML="";
+
+  if(ag.length===0){
+    lista.innerHTML="<p>Nenhum agendamento</p>";
+    return;
+  }
+
+  ag.forEach((a,i)=>{
+    lista.innerHTML+=`
+      <div class="card">
+        <b>${a.cliente}</b><br>
+        ${a.data} - ${a.hora}<br>
+        Total: R$ ${a.total}<br>
+        <button onclick="cancelar(${i})">Cancelar</button>
+      </div>
+    `;
+  });
+}
+
+/* --------- AGENDA DE HOJE --------- */
+function carregarAgendaHoje(){
+  let ag = JSON.parse(localStorage.getItem("agendamentos")) || [];
+  let hoje = new Date().toISOString().split("T")[0];
+  listaHoje.innerHTML="";
+
+  let hojeLista = ag.filter(a => a.data === hoje);
+
+  if(hojeLista.length === 0){
+    listaHoje.innerHTML="<p>Nenhum agendamento para hoje</p>";
+    return;
+  }
+
+  hojeLista.forEach(a=>{
+    listaHoje.innerHTML+=`
+      <div class="card" style="background:#3a3a3a">
+        <b>${a.cliente}</b><br>
+        ${a.hora}<br>
+        Total: R$ ${a.total}
+      </div>
+    `;
+  });
+}
+
+/* --------- CANCELAR --------- */
+function cancelar(i){
+  if(confirm("Cancelar agendamento?")){
+    let ag = JSON.parse(localStorage.getItem("agendamentos"));
+    ag.splice(i,1);
+    localStorage.setItem("agendamentos", JSON.stringify(ag));
+    carregarAgenda();
+    carregarAgendaHoje();
+    mostrarMensagem("Agendamento cancelado", false);
+  }
+}
+</script>
+
+</body>
